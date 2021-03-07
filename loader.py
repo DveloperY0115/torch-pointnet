@@ -91,3 +91,14 @@ def jitter_point_cloud(batch_data, sigma=0.01, clip=0.05):
     noise = np.clip(sigma * np.random.randn(B, N, C), -1*clip, clip)
     batch_data += noise
     return batch_data
+
+
+def get_datafiles(list_filename):
+    """
+    Get a list of file names for training/testing.
+    :param list_filename: String. Path to a file containing file names of data
+    :return: A list of file names for training/testing
+    """
+    return [line.rstrip() for line in open(list_filename)]
+
+

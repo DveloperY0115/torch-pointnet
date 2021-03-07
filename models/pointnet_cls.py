@@ -10,6 +10,7 @@ sys.path.append(BASE_DIR)
 sys.path.append(os.path.join('../utils'))
 from transform_nets import TransformNet
 
+
 class PointNet(torch.nn.Module):
     """
     PointNet class
@@ -26,9 +27,9 @@ class PointNet(torch.nn.Module):
 
         # MLPs for feature extraction
         # Consists of 1-D convolution layers
-        self.mlp_64 = nn.Conv1d(3, 64, 1)
-        self.mlp_128 = nn.Conv1d(64, 128, 1)
-        self.mlp_1024 = nn.Conv1d(128, 1024, 1)
+        self.mlp_64 = nn.Conv1d(in_channels=3, out_channels=64, kernel_size=1)
+        self.mlp_128 = nn.Conv1d(in_channels=64, out_channels=128, kernel_size=1)
+        self.mlp_1024 = nn.Conv1d(in_channels=128, out_channels=1024, kernel_size=1)
 
         # Fully Connected layers for classification
         self.fc1 = nn.Linear(1024, 512)
@@ -48,7 +49,7 @@ class PointNet(torch.nn.Module):
         :param x: Input data
         :return: Probability mass function containing probability of each class
         """
-        batch_size = x.size()[0]
+        batch_size = x.shape[0]
         x = self.t_net_input(x)
         x = F.relu(self.bn1(self.mlp_64(x)))
         x = self.t_net_feature(x)

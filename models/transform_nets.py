@@ -18,5 +18,5 @@ class TransformNet(nn.Module):
         super(TransformNet, self).__init__()
         self.transform_layer = nn.Linear(size, size, bias=False)
 
-    def forward(self, X):
-        return self.transform_layer(X)
+    def forward(self, x):
+        return self.transform_layer(x)

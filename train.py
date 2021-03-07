@@ -32,8 +32,18 @@ def train_one_epoch(model, criterion, optimizer):
 
     for file in files:
         for data, label in generate_batch(file):
-            print(data.shape, label.shape)
+            # Make prediction
+            pred = model(data)
 
+            # Calculate loss
+            cost = criterion(pred, label)
+
+            # Update weights
+            optimizer.zero_grad()
+            cost.backward()
+            optimizer.step()
+
+            print('Cost: {}'.format(cost.item()))
 
 
 def generate_batch(filename, batch_size=32):
@@ -54,7 +64,7 @@ def generate_batch(filename, batch_size=32):
         current_data = loader.rotate_point_cloud(data[start_idx:end_idx, :, :])
         current_data = loader.jitter_point_cloud(current_data)
         current_label = label[start_idx:end_idx]
-        yield current_data, current_label
+        yield torch.from_numpy(current_data), current_label
 
 
 if __name__ == '__main__':

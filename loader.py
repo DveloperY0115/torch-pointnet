@@ -95,10 +95,27 @@ def jitter_point_cloud(batch_data, sigma=0.01, clip=0.05):
 
 def get_datafiles(list_filename):
     """
-    Get a list of file names for training/testing.
-    :param list_filename: String. Path to a file containing file names of data
-    :return: A list of file names for training/testing
+    Get a list of filenames for training/testing.
+    :param list_filename: String. Path to a file containing filenames of data
+    :return: A list of filenames for training/testing
     """
     return [line.rstrip() for line in open(list_filename)]
+
+
+def load_h5(h5_filename):
+    """
+    Load h5 file. H5 should contain fields 'data', and 'label'.
+    :param h5_filename: String. Path to a h5 file
+    :return: Tuple of data & label arrays
+    """
+    file = h5py.File(h5_filename, 'r')
+    data = file['data'][:]
+    label = file['label'][:]
+    return data, label
+
+
+def load_datafile(filename):
+    return load_h5(filename)
+
 
 

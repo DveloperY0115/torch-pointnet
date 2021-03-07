@@ -1,4 +1,6 @@
 import torch
+import torch.nn as nn
+import torch.nn.functional as F
 import numpy as np
 import math
 import sys
@@ -8,12 +10,12 @@ sys.path.append(BASE_DIR)
 sys.path.append(os.path.join('../utils'))
 
 
-class TransformNet(torch.nn.Module):
+class TransformNet(nn.Module):
     """
     Network for inferring transforms applied on input data and feature matrices.
     """
-    def __init__(self, D_in, H, D_out):
-        pass
+    def __init__(self, size):
+        self.transform_layer = nn.Linear(size, size, bias=False)
 
     def forward(self, X):
-        pass
+        return self.transform_layer(X)

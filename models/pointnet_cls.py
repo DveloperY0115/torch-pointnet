@@ -43,14 +43,24 @@ class PointNet(torch.nn.Module):
         self.bn4 = nn.BatchNorm1d(512)    # batch norm after fc1
         self.bn5 = nn.BatchNorm1d(256)    # batch norm after fc2
 
-    def forward(self, X):
-
-
-
-
-    def forward(self, X):
+    def forward(self, x):
         """
         Forward propagation.
-        :param X: Input data
-        :return: Pr
+        :param x: Input data
+        :return: Probability mass function containing probability of each class
         """
+        batch_size = x.size()[0]
+        x = self.t_net_input(x)
+        x = F.relu(self.bn1(self.mlp_64(x)))
+        x = self.t_net_feature(x)
+        x = F.relu(self.bn2(self.mlp_128(x)))
+        x = F.relu(self.bn3(self.mlp_1024(x)))
+        x = torch.max(x, 2, keepdim=True)[0]
+        x = x.view(-1, 1024)
+
+        x = F.relu(self.bn4(self.fc1(x)))
+        x = F.relu(self.bn5(self.fc2(x)))
+        x = self.fc3(x)
+
+        return x
+    

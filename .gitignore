@@ -2,3 +2,6 @@
 
 # Data
 data
+
+# Python
+*.pyc

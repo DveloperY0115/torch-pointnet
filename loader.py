@@ -75,3 +75,19 @@ def rotate_point_cloud_by_angle(batch_data, theta):
         original_pc = batch_data[k, ...]  # get k-th point cloud
         rotated_data[k, ...] = np.dot(original_pc.reshape(-1, 3), rotation_matrix)
     return rotated_data
+
+
+def jitter_point_cloud(batch_data, sigma=0.01, clip=0.05):
+    """
+    Randomly jitter points.
+    Introduce Gaussian noise to point clouds.
+    :param batch_data: B,N,3 array. original batch of point clouds
+    :param sigma: Floating point number. standard deviation for Gaussian noise
+    :param clip: Floating point number. upper/lower bounds of noise magnitude
+    :return: B,N,3 array. augmented batch of point clouds
+    """
+    B, N, C = batch_data.shape
+    assert(clip > 0)
+    noise = np.clip(sigma * np.random.randn(B, N, C), -1*clip, clip)
+    batch_data += noise
+    return batch_data

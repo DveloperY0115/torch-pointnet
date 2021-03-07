@@ -15,6 +15,7 @@ class TransformNet(nn.Module):
     Network for inferring transforms applied on input data and feature matrices.
     """
     def __init__(self, size):
+        super(TransformNet, self).__init__()
         self.transform_layer = nn.Linear(size, size, bias=False)
 
     def forward(self, X):

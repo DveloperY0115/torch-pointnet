@@ -5,6 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from models.pointnet_cls import PointNet
 import loader
+import random
 import os
 import sys
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -26,12 +27,16 @@ def train(model, criterion, optimizer, num_epochs=300):
 
 
 def train_one_epoch(model, criterion, optimizer):
+    files = TRAIN_FILES
+    random.shuffle(files)
 
-    batch = generate_batch()
+    for file in files:
+        for data, label in generate_batch(file):
+            print(data.shape, label.shape)
+
 
 
 def generate_batch(filename, batch_size=32):
-
     print('--- Loading From ---')
     print('---{}---'.format(filename))
     data, label = loader.load_datafile(filename)
@@ -46,9 +51,11 @@ def generate_batch(filename, batch_size=32):
         end_idx = (batch_idx+1) * batch_size
 
         # Data augmentation - Random rotation & Gaussian noise
-        data = loader.rotate_point_cloud(data[start_idx:end_idx, :, :])
-        data = loader.jitter_point_cloud(data)
-        yield data, label
+        current_data = loader.rotate_point_cloud(data[start_idx:end_idx, :, :])
+        current_data = loader.jitter_point_cloud(current_data)
+        current_label = label[start_idx:end_idx]
+        yield current_data, current_label
+
 
 if __name__ == '__main__':
 

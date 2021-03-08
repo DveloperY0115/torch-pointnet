@@ -2,6 +2,7 @@ import argparse
 import numpy as np
 import torch
 import torch.nn as nn
+from torchsummary import summary
 import torch.nn.functional as F
 from torch.utils.data import TensorDataset, DataLoader
 from models.pointnet_cls import PointNet
@@ -19,6 +20,7 @@ TRAIN_FILES = loader.get_datafiles(\
 TEST_FILES = loader.get_datafiles(\
     os.path.join(BASE_DIR, 'data/modelnet40_ply_hdf5_2048/test_files.txt'))
 NUM_POINT = 1024
+MODELNET_CLASSES = 40
 
 
 def train(model, criterion, optimizer, num_epochs=300):
@@ -61,13 +63,15 @@ def generate_dataset(filename):
     data = loader.rotate_point_cloud(data[:, :, :])
     data = loader.jitter_point_cloud(data)
 
-    print(data.shape, label.shape)
-    return torch.from_numpy(data), torch.from_numpy(label).view(-1, 1)
+    return torch.from_numpy(data), torch.LongTensor(label)
 
 
 if __name__ == '__main__':
 
-    model = PointNet()
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') # Use CUDA if possible
+    model = PointNet(num_classes=MODELNET_CLASSES).to(device)
+
+    summary(model, (1024, 3))
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(model.parameters(), lr=1e-4)
 

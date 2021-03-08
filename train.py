@@ -22,11 +22,28 @@ TEST_FILES = loader.get_datafiles(\
 NUM_POINT = 1024
 MODELNET_CLASSES = 40
 
+epoch = 0
 
-def train(model, criterion, optimizer, num_epochs=300):
-    for i in range(num_epochs):
+def save_checkpoint(path, model, criterion, optimizer, epoch):
+    torch.save({
+        'epoch': epoch,
+        'model_state_dict': model.state_dict(),
+        'optimizer_state_dict': optimizer.state_dict(),
+        'loss': criterion
+    }, path)
+
+
+def train(model,
+          criterion,
+          optimizer,
+          num_epochs=300,
+          checkpoint_dir=str(os.path.join(BASE_DIR, 'checkpoints'))):
+    global epoch
+    filename = os.path.join(checkpoint_dir, 'checkpoint.tar')
+    for epoch in range(num_epochs):
+        save_checkpoint(filename, model, criterion, optimizer, epoch)
         train_one_epoch(model, criterion, optimizer)
-        pass
+        save_checkpoint(filename, model, criterion, optimizer, epoch+1)
 
 
 def train_one_epoch(model, criterion, optimizer):
@@ -53,8 +70,6 @@ def train_one_epoch(model, criterion, optimizer):
 
 
 def generate_dataset(filename):
-    print('--- Loading From ---')
-    print('---{}---'.format(filename))
     data, label = loader.load_datafile(filename)
     data = data[:,0:NUM_POINT,:]
     label = np.squeeze(label)
@@ -68,11 +83,30 @@ def generate_dataset(filename):
 
 if __name__ == '__main__':
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') # Use CUDA if possible
+    # Use CUDA if available
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+    # Set directory for storing weight files
+    checkpoint_dir = os.path.join(BASE_DIR, 'checkpoints')
+    checkpoint_file = os.path.join(checkpoint_dir, 'checkpoint.tar')
+
     model = PointNet(num_classes=MODELNET_CLASSES).to(device)
+    criterion = nn.CrossEntropyLoss()
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+
+    if os.path.exists(checkpoint_file):
+        print('Weight file already exists. Loading...')
+
+        checkpoint = torch.load(checkpoint_file)
+        model.load_state_dict(checkpoint['model_state_dict'])
+        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        epoch = checkpoint['epoch']
+
+        print('On epoch: {}'.format(epoch))
+        model.train()
+    else:
+        os.mkdir('./checkpoints')
 
     summary(model, (1024, 3))
-    criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.SGD(model.parameters(), lr=1e-4)
 
     train(model, criterion, optimizer)

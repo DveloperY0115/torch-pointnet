@@ -106,6 +106,8 @@ if __name__ == '__main__':
     model = PointNet(num_classes=MODELNET_CLASSES).to(device)
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+    lr_scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer=optimizer,
+                                                     lr_lambda=lambda epoch: 0.95**epoch)
 
     if os.path.exists(checkpoint_file):
         print('Weight file already exists. Loading...')

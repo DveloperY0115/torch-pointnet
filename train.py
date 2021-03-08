@@ -1,4 +1,4 @@
-import argparse
+from tqdm import tqdm
 import numpy as np
 import torch
 import torch.nn as nn
@@ -38,8 +38,11 @@ def train(model,
           optimizer,
           num_epochs=300,
           checkpoint_dir=str(os.path.join(BASE_DIR, 'checkpoints'))):
+
     global epoch
+
     filename = os.path.join(checkpoint_dir, 'checkpoint.tar')
+
     for epoch in range(num_epochs):
         save_checkpoint(filename, model, criterion, optimizer, epoch)
         train_one_epoch(model, criterion, optimizer)
@@ -47,14 +50,18 @@ def train(model,
 
 
 def train_one_epoch(model, criterion, optimizer):
+    global epoch
     files = TRAIN_FILES
     random.shuffle(files)
+    cost_sum = 0
+    num_data = 0
 
     for file in files:
         data, label = generate_dataset(file)
         dataset = TensorDataset(data, label)
         loader = DataLoader(dataset, batch_size=32, shuffle=True, drop_last=False)
-        for x, y in loader:
+        num_data += len(loader)
+        for x, y in tqdm(loader):
             # Make prediction
             pred = model(x)
 
@@ -66,7 +73,13 @@ def train_one_epoch(model, criterion, optimizer):
             cost.backward()
             optimizer.step()
 
-            print('Cost: {}'.format(cost.item()))
+            cost_sum += cost.item()
+
+    print('------------epoch {}----------------'.format(epoch))
+    print('Cost: {}'.format(cost_sum / num_data))
+    for param_group in optimizer.param_groups:
+        print('Learning rate: {}'.format(str(param_group['lr'])))
+    print('----------------*-------------------')
 
 
 def generate_dataset(filename):

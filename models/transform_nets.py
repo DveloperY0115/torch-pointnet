@@ -10,6 +10,7 @@ sys.path.append(BASE_DIR)
 sys.path.append(os.path.join('../utils'))
 
 
+# TODO: Implement T-Net following the exact specification
 class TransformNet(nn.Module):
     """
     Network for inferring transforms applied on input data and feature matrices.

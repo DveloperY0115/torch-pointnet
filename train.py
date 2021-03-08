@@ -3,6 +3,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.utils.data import TensorDataset, DataLoader
 from models.pointnet_cls import PointNet
 import loader
 import random
@@ -31,12 +32,15 @@ def train_one_epoch(model, criterion, optimizer):
     random.shuffle(files)
 
     for file in files:
-        for data, label in generate_batch(file):
+        data, label = generate_dataset(file)
+        dataset = TensorDataset(data, label)
+        loader = DataLoader(dataset, batch_size=32, shuffle=True, drop_last=False)
+        for x, y in loader:
             # Make prediction
-            pred = model(data)
+            pred = model(x)
 
             # Calculate loss
-            cost = criterion(pred, label)
+            cost = criterion(pred, y)
 
             # Update weights
             optimizer.zero_grad()
@@ -46,25 +50,19 @@ def train_one_epoch(model, criterion, optimizer):
             print('Cost: {}'.format(cost.item()))
 
 
-def generate_batch(filename, batch_size=32):
+def generate_dataset(filename):
     print('--- Loading From ---')
     print('---{}---'.format(filename))
     data, label = loader.load_datafile(filename)
     data = data[:,0:NUM_POINT,:]
-    data, label, _ = loader.shuffle_data(data, np.squeeze(label))
     label = np.squeeze(label)
-    file_size = data.shape[0]
-    num_batches = file_size // batch_size
 
-    for batch_idx in range(num_batches):
-        start_idx = batch_idx * batch_size
-        end_idx = (batch_idx+1) * batch_size
+    # data augmentation
+    data = loader.rotate_point_cloud(data[:, :, :])
+    data = loader.jitter_point_cloud(data)
 
-        # Data augmentation - Random rotation & Gaussian noise
-        current_data = loader.rotate_point_cloud(data[start_idx:end_idx, :, :])
-        current_data = loader.jitter_point_cloud(current_data)
-        current_label = label[start_idx:end_idx]
-        yield torch.from_numpy(current_data), current_label
+    print(data.shape, label.shape)
+    return torch.from_numpy(data), torch.from_numpy(label).view(-1, 1)
 
 
 if __name__ == '__main__':

@@ -56,7 +56,8 @@ def train_one_epoch(model, criterion, optimizer):
     cost_sum = 0
     num_data = 0
 
-    for file in files:
+    for (idx, file) in enumerate(files):
+        print('Iterating over dataset: [{}/{}]'.format(idx, len(files)))
         data, label = generate_dataset(file)
         dataset = TensorDataset(data, label)
         loader = DataLoader(dataset, batch_size=32, shuffle=True, drop_last=False)

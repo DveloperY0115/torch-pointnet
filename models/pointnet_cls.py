@@ -14,13 +14,16 @@ sys.path.append(os.path.join('../utils'))
 from transform_nets import TransformNet
 
 class PointNetCls(torch.nn.Module):
-    """
-    PointNet class
-    """
+
     def __init__(self, input_dim=3, num_classes=9):
         """
         Constructor.
+
+        Args:
+        - input_dim: Int. Dimension of point cloud. Typically 3
+        - num_classes: Int. Number of classes involved in a classification problem
         """
+
         super(PointNet, self).__init__()
         self.input_dim = input_dim
         self.num_classes = num_classes
@@ -57,49 +60,32 @@ class PointNetCls(torch.nn.Module):
 
     def forward(self, x):
         """
-        Forward propagation.
-        :param x: Input data
-        :return: Probability mass function containing probability of each class
+        Forward propagation of PointNetCls
+
+        Args:
+        - x: A Tensor of shape (B, N, C)
+
+        Returns: Unnormalized probability distribution of classes
         """
-        batch_size = x.size()[0]
-        num_points = x.size()[1]
+        
+        if not torch.is_tensor(x):
+            x = torch.Tensor(x)
 
-        x = self.t_net_input(x)    # (B, N, 3) -> (B, N, 3)
-        x = self.mlp_3_64(x)    # (B, N, 3) -> (B, N, 64)
+        x = x.transpose(2, 1)    # x.shape <- (B, C, N)
 
-        # Batch normalization after 3 -> 64
-        x = x.view(batch_size, -1, num_points)
-        x = self.bn_64_a(x)
-        x = x.view(batch_size, num_points, -1)
+        x = F.relu(self.bn_conv_1(self.conv_1(x)))
+        x = F.relu(self.bn_conv_2(self.conv_2(x)))
+        x = F.relu(self.bn_conv_3(self.conv_3(x)))
+        x = F.relu(self.bn_conv_4(self.conv_4(x)))
+        x = F.relu(self.bn_conv_5(self.conv_5(x)))
 
-        x = self.mlp_64_64_a(x)    # (B, N, 64) -> (B, N, 64)
+        # x.shape = (B, 1024, N)
+        x = torch.max(x, 2, keepdim=True)[0]
+        x = x.view(-1, 1024)
 
-        # Batch normalization after 64 -> 64
-        x = x.view(batch_size, -1, num_points)
-        x = self.bn_64_b(x)
-        x = x.view(batch_size, num_points, -1)
+        x = self.do_fc_1024_512(F.relu(self.bn_fc_1024_512(self.fc_1024_512(x))))
+        x = self.do_fc_512_256(F.relu(self.bn_fc_512_256(self.fc_512_256(x))))
+        x = self.fc_256_out(x)
 
-        x = self.t_net_feature(x)    # (B, N, 64) -> (B, N, 64)
-
-        x = self.mlp_64_128(x)    # (B, N, 64) -> (B, N, 128)
-
-        # Batch normalization after 64 -> 128
-        x = x.view(batch_size, -1, num_points)
-        x = self.bn_128(x)
-        x = x.view(batch_size, num_points, -1)
-
-        x = self.mlp_128_1024(x)    # (B, N, 128) -> (B, N, 1024)
-
-        # Batch normalization after 128 -> 1024
-        x = x.view(batch_size, -1, num_points)
-        x = self.bn_1024(x)
-        x = x.view(batch_size, num_points, -1)
-
-        # Apply max pooling
-        x, _ = torch.max(x, dim=1)    # (B, N, 1024) -> (B, 1024)
-
-        x = self.fc_1024_512(x)
-        x = self.fc_512_256(x)
-        x = self.fc_256_k(x)
-
+        # x.shape = (B, num_classes)
         return x

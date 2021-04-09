@@ -19,7 +19,7 @@ from transform_nets import TransformNet
 
 class PointNetCls(torch.nn.Module):
 
-    def __init__(self, input_dim=3, num_classes=9):
+    def __init__(self, input_dim=3, num_classes=40):
         """
         Constructor.
 

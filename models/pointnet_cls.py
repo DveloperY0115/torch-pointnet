@@ -1,59 +1,59 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
 import numpy as np
 import math
 import sys
 import os
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(BASE_DIR)
 sys.path.append(os.path.join('../utils'))
+
 from transform_nets import TransformNet
 
-# -------*-------
-# hack tensor_repr for easier debugging
-old_repr = torch.Tensor.__repr__
-
-
-def tensor_info(tensor):
-    return repr(tensor.shape)[6:] + ' ' + repr(tensor.dtype)[6:] + '@' + str(tensor.device) + '\n' + old_repr(tensor)
-
-
-torch.Tensor.__repr__ = tensor_info
-# -------*-------
-
-
-class PointNet(torch.nn.Module):
+class PointNetCls(torch.nn.Module):
     """
     PointNet class
     """
-    def __init__(self, num_classes=9):
+    def __init__(self, input_dim=3, num_classes=9):
         """
         Constructor.
         """
         super(PointNet, self).__init__()
+        self.input_dim = input_dim
+        self.num_classes = num_classes
 
-        # T-Nets
-        self.t_net_input = TransformNet(size=3)
-        self.t_net_feature = TransformNet(size=64)
+        self.dropout_prop = 0.5
 
-        # MLPs -> Official implementation uses Conv Layers but following naive one suggested in the paper
-        self.mlp_3_64 = nn.Linear(in_features=3, out_features=64)
-        self.mlp_64_64_a = nn.Linear(in_features=64, out_features=64)
-        self.mlp_64_64_b = nn.Linear(in_features=64, out_features=64)
-        self.mlp_64_128 = nn.Linear(in_features=64, out_features=128)
-        self.mlp_128_1024 = nn.Linear(in_features=128, out_features=1024)
+        # Conv layer for aggregating global features
+        self.conv_1 = nn.Conv1d(self.input_dim, 64, 1)
+        self.conv_2 = nn.Conv1d(64, 64, 1)
+        self.conv_3 = nn.Conv1d(64, 64, 1)
+        self.conv_4 = nn.Conv1d(64, 128, 1)
+        self.conv_5 = nn.Conv1d(128, 1024, 1)
 
-        # Fully Connected Layers
-        self.fc_1024_512 = nn.Linear(in_features=1024, out_features=512)
-        self.fc_512_256 = nn.Linear(in_features=512, out_features=256)
-        self.fc_256_k = nn.Linear(in_features=256, out_features=num_classes)
+        # Batch Norms for Conv layers
+        self.bn_conv_1 = nn.BatchNorm1d(64)
+        self.bn_conv_2 = nn.BatchNorm1d(64)
+        self.bn_conv_3 = nn.BatchNorm1d(64)
+        self.bn_conv_4 = nn.BatchNorm1d(128)
+        self.bn_conv_5 = nn.BatchNorm1d(1024)
 
-        # Batch normalization layers
-        self.bn_64_a = nn.BatchNorm1d(num_features=64)
-        self.bn_64_b = nn.BatchNorm1d(num_features=64)
-        self.bn_128 = nn.BatchNorm1d(num_features=128)
-        self.bn_1024 = nn.BatchNorm1d(num_features=1024)
+        # Fully Connected layers
+        self.fc_1024_512 = nn.Linear(1024, 512)
+        self.fc_512_256 = nn.Linear(512, 256)
+        self.fc_256_out = nn.Linear(256, self.num_classes)
+
+        # Batch Norms for FC layers
+        self.bn_fc_1024_512 = nn.BatchNorm1d(512)
+        self.bn_fc_512_256 = nn.BatchNorm1d(256)
+
+        # Dropout for FC layers
+        self.do_fc_1024_512 = nn.Dropout(p=self.dropout_prop)
+        self.do_fc_512_256 = nn.Dropout(p=self.dropout_prop)
+
 
     def forward(self, x):
         """

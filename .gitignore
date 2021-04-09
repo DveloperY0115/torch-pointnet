@@ -1,8 +1,7 @@
 .idea
 
 # Data
-./data
-*.zip
+data
 
 # Python
 *.pyc

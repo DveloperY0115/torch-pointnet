@@ -28,7 +28,7 @@ class PointNetCls(torch.nn.Module):
         - num_classes: Int. Number of classes involved in a classification problem
         """
 
-        super(PointNet, self).__init__()
+        super(PointNeCls, self).__init__()
         self.input_dim = input_dim
         self.num_classes = num_classes
 

@@ -1,3 +1,7 @@
+"""
+Simplified implementation of PointNet (Charles R. Q et al., CVPR 2017)
+"""
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F

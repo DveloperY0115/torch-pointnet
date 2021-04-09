@@ -4,10 +4,11 @@ Custom dataloader for PointNet implementation
 
 import os
 import requests
+import zipfile
 from tqdm import tqdm
 from torch.utils.data import Dataset, DataLoader
 
-def get_modelnet_40(data_dir='./data/', data_url='http://modelnet.cs.princeton.edu/ModelNet40.zip'):
+def get_modelnet_40(data_dir='./data/', data_url='http://modelnet.cs.princeton.edu/ModelNet40.zip', keep_zipped=False):
     """
     Download ModelNet40 dataset
 
@@ -42,6 +43,16 @@ def get_modelnet_40(data_dir='./data/', data_url='http://modelnet.cs.princeton.e
 
     if total_size_in_bytes != 0 and progress_bar.n != total_size_in_bytes:
         print('[!] ERROR, something went wrong')
+        exit(-1)
+
+    if not keep_zipped:
+        # extract files
+        zipped_file = zipfile.ZipFile(file_path)
+        zipped_file.extract()
+        zipped_file.close()
+
+        # remove zipped file
+        os.remove(file_path)
 
 if __name__ == '__main__':
     get_modelnet_40()

@@ -26,7 +26,7 @@ def get_modelnet_40(data_dir='./data/', data_url='http://modelnet.cs.princeton.e
     
     if os.path.isfile(file_path):
         print('[!] File already exists. Fetching is not required.')
-        return 
+        exit(0)
 
     # create progress bar
     response = requests.get(data_url, stream=True)
@@ -47,12 +47,15 @@ def get_modelnet_40(data_dir='./data/', data_url='http://modelnet.cs.princeton.e
 
     if not keep_zipped:
         # extract files
+        print('[!] Extracting files...')
         zipped_file = zipfile.ZipFile(file_path)
         zipped_file.extract()
         zipped_file.close()
 
         # remove zipped file
+        print('[!] Cleaning up...')
         os.remove(file_path)
 
 if __name__ == '__main__':
     get_modelnet_40()
+    exit(0)

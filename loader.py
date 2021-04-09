@@ -34,7 +34,7 @@ def get_modelnet_40(data_dir='./data/', data_url='http://modelnet.cs.princeton.e
     progress_bar = tqdm(total=total_size_in_bytes, unit='iB', unit_scale=True)
 
     # download file, visualize progress
-    with open(filename, 'wb') as file:
+    with open(file_path, 'wb') as file:
         for data in response.iter_content(block_size):
             progress_bar.update(len(data))
             file.write(data)

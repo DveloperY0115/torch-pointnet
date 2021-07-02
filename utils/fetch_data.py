@@ -28,6 +28,8 @@ def get_modelnet_40(data_dir='./data/', data_url='http://modelnet.cs.princeton.e
     if os.path.isfile(file_path):
         print('[!] File already exists. Fetching is not required.')
     else:
+        print('[!] Start downloading...') 
+
         # create progress bar
         response = requests.get(data_url, stream=True)
         total_size_in_bytes = int(response.headers.get('content-length', 0))

@@ -11,17 +11,20 @@ sys.path.append(BASE_DIR)
 sys.path.append(os.path.join('../utils'))
 
 
-class TNet_Cls(nn.Module):
+class TNetCls(nn.Module):
 
-    def __init__(self, input_dim=3, affine_dim=3):
+    def __init__(self, input_dim, affine_dim):
         """
         Constructor.
 
         Args:
         - input_dim: Int. Dimension of point cloud. Typically 3
+        - affine_dim: Int. Dimension of space where the Affine 
+            transform will be performed.
         """
 
-        super(TNet_Cls, self).__init__()
+        super(TNetCls, self).__init__()
+
         self.input_dim = input_dim
         self.affine_dim = affine_dim
         self.dropout_prop = 0.5
@@ -44,10 +47,6 @@ class TNet_Cls(nn.Module):
         # Batch Norms for FC layers
         self.bn_fc_1 = nn.BatchNorm1d(512)
         self.bn_fc_2 = nn.BatchNorm1d(256)
-
-        # Dropout for FC layers
-        self.do_1 = nn.Dropout(p=self.dropout_prop)
-        self.do_2 = nn.Dropout(p=self.dropout_prop)
 
 
     def forward(self, x):
@@ -72,8 +71,8 @@ class TNet_Cls(nn.Module):
         x = torch.max(x, 2, keepdim=True)[0]
         x = x.view(-1, 1024)
 
-        x = self.do_1(F.relu(self.bn_fc_1(self.fc_1(x))))
-        x = self.do_2(F.relu(self.bn_fc_2(self.fc_2(x))))
+        x = F.relu(self.bn_fc_1(self.fc_1(x)))
+        x = F.relu(self.bn_fc_2(self.fc_2(x)))
         x = self.fc_3(x)
 
         x = x.view(-1, self.affine_dim, self.affine_dim)

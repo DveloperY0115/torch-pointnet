@@ -8,7 +8,7 @@ import zipfile
 from tqdm import tqdm
 from torch.utils.data import Dataset, DataLoader
 
-def get_modelnet_40(data_dir='./data/', data_url='http://modelnet.cs.princeton.edu/ModelNet40.zip', extract_file=True):
+def get_modelnet_40(data_dir='./data/', data_url='https://shapenet.cs.stanford.edu/media/modelnet40_ply_hdf5_2048.zip', extract_file=True):
     """
     Download ModelNet40 dataset
 
@@ -31,7 +31,7 @@ def get_modelnet_40(data_dir='./data/', data_url='http://modelnet.cs.princeton.e
         print('[!] Start downloading...') 
 
         # create progress bar
-        response = requests.get(data_url, stream=True)
+        response = requests.get(data_url, stream=True, verify=False)
         total_size_in_bytes = int(response.headers.get('content-length', 0))
         block_size = 1024
         progress_bar = tqdm(total=total_size_in_bytes, unit='iB', unit_scale=True)

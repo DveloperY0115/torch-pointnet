@@ -14,10 +14,10 @@ import os
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(BASE_DIR)
-sys.path.append('../utils')
+sys.path.append("../utils")
+
 
 class PointNetCls(torch.nn.Module):
-
     def __init__(self, input_dim=3, num_classes=40):
         """
         Constructor.
@@ -64,7 +64,6 @@ class PointNetCls(torch.nn.Module):
         self.tnet_1 = TNetCls(input_dim=3, affine_dim=3)
         self.tnet_2 = TNetCls(input_dim=64, affine_dim=64)
 
-
     def forward(self, x):
         """
         Forward propagation of PointNetCls
@@ -74,7 +73,7 @@ class PointNetCls(torch.nn.Module):
 
         Returns: Unnormalized probability distribution of classes
         """
-        
+
         if not torch.is_tensor(x):
             x = torch.Tensor(x)
 

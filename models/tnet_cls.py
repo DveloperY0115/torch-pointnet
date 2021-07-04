@@ -1,18 +1,15 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
-import math
 import sys
 import os
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(BASE_DIR)
-sys.path.append(os.path.join('../utils'))
+sys.path.append(os.path.join("../utils"))
 
 
 class TNetCls(nn.Module):
-
     def __init__(self, input_dim, affine_dim):
         """
         Constructor.
@@ -32,7 +29,7 @@ class TNetCls(nn.Module):
         # Conv layer
         self.conv_1 = nn.Conv1d(self.input_dim, 64, 1)
         self.conv_2 = nn.Conv1d(64, 128, 1)
-        self.conv_3 = nn.Conv1d(128, 1024 ,1)
+        self.conv_3 = nn.Conv1d(128, 1024, 1)
 
         # Batch Norms for Conv layers
         self.bn_conv_1 = nn.BatchNorm1d(64)
@@ -48,7 +45,6 @@ class TNetCls(nn.Module):
         self.bn_fc_1 = nn.BatchNorm1d(512)
         self.bn_fc_2 = nn.BatchNorm1d(256)
 
-
     def forward(self, x):
         """
         Forward propagation of TNetCls
@@ -62,7 +58,7 @@ class TNetCls(nn.Module):
         if not torch.is_tensor(x):
             x = torch.Tensor(x)
 
-        x = x.transpose(2, 1)    # x.shape <- (B, C, N)
+        x = x.transpose(2, 1)  # x.shape <- (B, C, N)
 
         x = F.relu(self.bn_conv_1(self.conv_1(x)))
         x = F.relu(self.bn_conv_2(self.conv_2(x)))

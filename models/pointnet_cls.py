@@ -31,7 +31,7 @@ class PointNetCls(torch.nn.Module):
 
         self.input_dim = input_dim
         self.num_classes = num_classes
-        self.dropout_prop = 0.5
+        self.dropout_prop = 0.7
 
         # Conv layer for aggregating global features
         self.conv_1 = nn.Conv1d(self.input_dim, 64, 1)
@@ -56,8 +56,7 @@ class PointNetCls(torch.nn.Module):
         self.bn_fc_1024_512 = nn.BatchNorm1d(512)
         self.bn_fc_512_256 = nn.BatchNorm1d(256)
 
-        # Dropout for FC layers
-        self.do_fc_1024_512 = nn.Dropout(p=self.dropout_prop)
+        # Dropout for FC layer
         self.do_fc_512_256 = nn.Dropout(p=self.dropout_prop)
 
         # T-Nets
@@ -99,9 +98,10 @@ class PointNetCls(torch.nn.Module):
         x = torch.max(x, 2, keepdim=True)[0]
         x = x.view(-1, 1024)
 
-        x = self.do_fc_1024_512(F.relu(self.bn_fc_1024_512(self.fc_1024_512(x))))
+        x = F.relu(self.bn_fc_1024_512(self.fc_1024_512(x)))
         x = self.do_fc_512_256(F.relu(self.bn_fc_512_256(self.fc_512_256(x))))
         x = self.fc_256_out(x)
 
-        # x.shape = (B, num_classes)
-        return x
+        # x.shape -> (B, num_classes)
+        # t_mat_2.shape -> (B, 64, 64)
+        return x, t_mat_2

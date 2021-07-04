@@ -104,4 +104,4 @@ class PointNetCls(torch.nn.Module):
         x = self.fc_256_out(x)
 
         # x.shape = (B, num_classes)
-        return F.softmax(x, dim=1)
+        return x

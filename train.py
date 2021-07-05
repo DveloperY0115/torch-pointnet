@@ -4,6 +4,7 @@ tran.py
 Training routine for PointNet.
 """
 
+import os
 import argparse
 from tqdm import tqdm
 import torch
@@ -18,11 +19,14 @@ parser = argparse.ArgumentParser(description="Parsing argument")
 parser.add_argument("--beta1", type=float, default=0.9, help="Beta 1 of Adam optimizer")
 parser.add_argument("--beta2", type=float, default=0.999, help="Beta 2 of Adam optimizer")
 parser.add_argument("--lr", type=float, default=1e-3, help="Learning rate for optimizer")
-parser.add_argument("--step_size", type=int, default=1, help="Step size of StepLR")
+parser.add_argument("--step_size", type=int, default=100, help="Step size of StepLR")
 parser.add_argument("--gamma", type=float, default=0.99, help="Gamma of StepLR")
-parser.add_argument("--num_epoch", type=int, default=10000, help="Number of epochs")
+parser.add_argument("--num_epoch", type=int, default=1000, help="Number of epochs")
 parser.add_argument("--num_iter", type=int, default=100, help="Number of iteration in one epoch")
 parser.add_argument("--batch_size", type=int, default=32, help="Size of a batch")
+parser.add_argument(
+    "--save_period", type=int, default=100, help="Number of epochs between checkpoints"
+)
 args = parser.parse_args()
 
 
@@ -47,7 +51,7 @@ def main():
     test_loader = DataLoader(test_data, batch_size=args.batch_size, shuffle=True, num_workers=0)
 
     # run training
-    for epoch in tqdm(range(args.num_epoch), leave=False):
+    for epoch in tqdm(range(args.num_epoch)):
         avg_loss = train_one_epoch(network, optimizer, scheduler, device, train_loader)
 
         print("------------------------------")
@@ -61,7 +65,36 @@ def main():
             print("Epoch {} accuracy: {} %".format(epoch, test_accuracy))
             print("------------------------------")
 
+        if epoch != 0 and (epoch % args.save_period == 0):
+            # save model
+            save_dir = "./checkpoint"
+
+            if not os.path.exists(save_dir):
+                os.mkdir(save_dir)
+            torch.save(
+                {
+                    "epoch": epoch,
+                    "model_state_dict": network.state_dict(),
+                    "optimizer_state_dict": optimizer.state_dict(),
+                    "scheduler_state_dict": scheduler.state_dict(),
+                    "loss": avg_loss,
+                },
+                os.path.join(save_dir, "{}.pt".format(str(epoch + 1))),
+            )
+
+            print(
+                "[!] Saved model at: {}".format(
+                    os.path.join(save_dir, "{}.pt".format(str(epoch + 1)))
+                )
+            )
+
     # clean up
+    save_dir = "./checkpoint"
+    if not os.path.exists(save_dir):
+        os.mkdir(save_dir)
+    torch.save({"model_state_dict": network.state_dict(),}, os.path.join(save_dir, "final.pt"))
+
+    print("[!] Saved model at: {}".format(os.path.join(save_dir, "final.pt")))
 
 
 def train_one_epoch(network, optimizer, scheduler, device, train_loader):
@@ -69,7 +102,7 @@ def train_one_epoch(network, optimizer, scheduler, device, train_loader):
     train_iter = iter(train_loader)
 
     total_loss = 0
-    for _ in tqdm(range(args.num_iter), leave=False):
+    for _ in tqdm(range(args.num_iter)):
         try:
             data, label = next(train_iter)
         except StopIteration:
@@ -84,18 +117,10 @@ def train_one_epoch(network, optimizer, scheduler, device, train_loader):
         label = label.to(device).long().squeeze()
 
         # forward propagation
-        pred, feat_mat = network(data)
-
-        # data related to feature matrix loss
-        id_mat = torch.eye(64, dtype=torch.float32, device=device)
-        id_mat = id_mat.unsqueeze(0)
-        id_mat = id_mat.repeat(args.batch_size, 1, 1)
-
-        feat_mat_T = feat_mat.transpose(1, 2)
+        pred = network(data)
 
         # calculate loss
         loss = nn.CrossEntropyLoss()(pred, label)
-        loss += 0.001 * nn.MSELoss()(id_mat, torch.bmm(feat_mat, feat_mat_T))
         total_loss += loss.item()
 
         # back propagation
@@ -119,17 +144,10 @@ def run_test(network, device, test_loader):
     label = label.to(device).long().squeeze()
 
     # forward propagation
-    pred, feat_mat = network(data)
-
-    # data related to feature matrix loss
-    id_mat = torch.eye(64, dtype=torch.float32, device=device)
-    id_mat = id_mat.unsqueeze(0)
-    id_mat = id_mat.repeat(args.batch_size, 1, 1)
-    feat_mat_T = feat_mat.transpose(1, 2)
+    pred = network(data)
 
     # calculate loss
     loss = nn.CrossEntropyLoss()(pred, label)
-    loss += 0.001 * nn.MSELoss()(id_mat, torch.bmm(feat_mat, feat_mat_T))
 
     # calculate accuracy
     pred = torch.argmax(pred, dim=1)

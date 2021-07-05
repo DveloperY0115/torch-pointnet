@@ -1,20 +1,17 @@
 """
 Simplified implementation of PointNet (Charles R. Q et al., CVPR 2017)
 """
+import os
+import sys
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(BASE_DIR)
+sys.path.append("../utils")
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from models.tnet_cls import TNetCls
-
-import numpy as np
-import math
-import sys
-import os
-
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(BASE_DIR)
-sys.path.append("../utils")
 
 
 class PointNetCls(torch.nn.Module):
@@ -57,11 +54,8 @@ class PointNetCls(torch.nn.Module):
         self.bn_fc_512_256 = nn.BatchNorm1d(256)
 
         # Dropout for FC layer
+        self.do_fc_1024_512 = nn.Dropout(p=self.dropout_prop)
         self.do_fc_512_256 = nn.Dropout(p=self.dropout_prop)
-
-        # T-Nets
-        self.tnet_1 = TNetCls(input_dim=3, affine_dim=3)
-        self.tnet_2 = TNetCls(input_dim=64, affine_dim=64)
 
     def forward(self, x):
         """
@@ -76,20 +70,11 @@ class PointNetCls(torch.nn.Module):
         if not torch.is_tensor(x):
             x = torch.Tensor(x)
 
-        # input transform
-        t_mat_1 = self.tnet_1(x)
-        x = torch.bmm(x, t_mat_1)
         x = x.transpose(1, 2)
 
         x = F.relu(self.bn_conv_1(self.conv_1(x)))
         x = F.relu(self.bn_conv_2(self.conv_2(x)))
         x = F.relu(self.bn_conv_3(self.conv_3(x)))
-
-        # feature transform
-        x = x.transpose(1, 2)
-        t_mat_2 = self.tnet_2(x)
-        x = torch.bmm(x, t_mat_2)
-        x = x.transpose(1, 2)
 
         x = F.relu(self.bn_conv_4(self.conv_4(x)))
         x = F.relu(self.bn_conv_5(self.conv_5(x)))
@@ -98,10 +83,9 @@ class PointNetCls(torch.nn.Module):
         x = torch.max(x, 2, keepdim=True)[0]
         x = x.view(-1, 1024)
 
-        x = F.relu(self.bn_fc_1024_512(self.fc_1024_512(x)))
+        x = self.do_fc_1024_512(F.relu(self.bn_fc_1024_512(self.fc_1024_512(x))))
         x = self.do_fc_512_256(F.relu(self.bn_fc_512_256(self.fc_512_256(x))))
         x = self.fc_256_out(x)
 
         # x.shape -> (B, num_classes)
-        # t_mat_2.shape -> (B, 64, 64)
-        return x, t_mat_2
+        return x

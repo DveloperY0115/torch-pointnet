@@ -51,7 +51,7 @@ def main():
     test_loader = DataLoader(test_data, batch_size=args.batch_size, shuffle=True, num_workers=0)
 
     # run training
-    for epoch in tqdm(range(args.num_epoch)):
+    for epoch in tqdm(range(args.num_epoch), leave=False):
         avg_loss = train_one_epoch(network, optimizer, scheduler, device, train_loader)
 
         print("------------------------------")
@@ -102,7 +102,7 @@ def train_one_epoch(network, optimizer, scheduler, device, train_loader):
     train_iter = iter(train_loader)
 
     total_loss = 0
-    for _ in tqdm(range(args.num_iter)):
+    for _ in tqdm(range(args.num_iter), leave=False):
         try:
             data, label = next(train_iter)
         except StopIteration:

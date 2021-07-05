@@ -79,12 +79,12 @@ def main():
                     "scheduler_state_dict": scheduler.state_dict(),
                     "loss": avg_loss,
                 },
-                os.path.join(save_dir, "{}.pt".format(str(epoch + 1))),
+                os.path.join(save_dir, "{}.pt".format(str(epoch))),
             )
 
             print(
                 "[!] Saved model at: {}".format(
-                    os.path.join(save_dir, "{}.pt".format(str(epoch + 1)))
+                    os.path.join(save_dir, "{}.pt".format(str(epoch)))
                 )
             )
 

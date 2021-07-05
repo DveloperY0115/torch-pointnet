@@ -4,6 +4,7 @@
 
 # Data
 data
+checkpoint
 
 # Python
 *.pyc

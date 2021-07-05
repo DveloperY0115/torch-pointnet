@@ -8,7 +8,6 @@ import argparse
 from tqdm import tqdm
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.data import DataLoader
 
@@ -48,7 +47,7 @@ def main():
     test_loader = DataLoader(test_data, batch_size=args.batch_size, shuffle=True, num_workers=0)
 
     # run training
-    for epoch in tqdm(range(args.num_epoch)):
+    for epoch in tqdm(range(args.num_epoch), leave=False):
         avg_loss = train_one_epoch(network, optimizer, scheduler, device, train_loader)
 
         print("------------------------------")
@@ -61,7 +60,6 @@ def main():
             print("Epoch {} test loss: {}".format(epoch, test_loss))
             print("Epoch {} accuracy: {} %".format(epoch, test_accuracy))
             print("------------------------------")
-
 
     # clean up
 
@@ -77,6 +75,9 @@ def train_one_epoch(network, optimizer, scheduler, device, train_loader):
         except StopIteration:
             train_iter = iter(train_loader)
             data, label = next(train_iter)
+
+        # initialize gradient
+        optimizer.zero_grad()
 
         # send data to device
         data = data.to(device)

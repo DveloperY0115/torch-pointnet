@@ -1,6 +1,7 @@
 # Tools
 .idea
 .vscode
+wandb
 
 # Data
 data

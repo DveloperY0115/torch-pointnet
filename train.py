@@ -26,7 +26,7 @@ parser.add_argument("--beta2", type=float, default=0.999, help="Beta 2 of Adam o
 parser.add_argument("--lr", type=float, default=1e-3, help="Learning rate for optimizer")
 parser.add_argument("--step_size", type=int, default=100, help="Step size of StepLR")
 parser.add_argument("--gamma", type=float, default=0.99, help="Gamma of StepLR")
-parser.add_argument("--num_epoch", type=int, default=1000, help="Number of epochs")
+parser.add_argument("--num_epoch", type=int, default=100, help="Number of epochs")
 parser.add_argument("--num_iter", type=int, default=100, help="Number of iteration in one epoch")
 parser.add_argument("--batch_size", type=int, default=64, help="Size of a batch")
 parser.add_argument("--num_worker", type=int, default=8, help="Number of workers for data loader")
@@ -38,6 +38,8 @@ args = parser.parse_args()
 
 
 def main():
+    
+    config = wandb.config
 
     # check GPU
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -51,17 +53,17 @@ def main():
     if (device.type == "cuda") and (torch.cuda.device_count() > 1):
         print("[!] Multiple GPU available, but not yet supported")
 
-    optimizer = optim.Adam(network.parameters(), betas=(args.beta1, args.beta2), lr=args.lr)
-    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=args.step_size, gamma=args.gamma)
+    optimizer = optim.Adam(network.parameters(), betas=(config["beta1"], config["beta2"]), lr=config["lr"])
+    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=config["step_size"], gamma=config["gamma"])
 
     # prepare data loaders
     train_data = PointNetDataset(mode="train")
     test_data = PointNetDataset(mode="test")
-    train_loader = DataLoader(train_data, batch_size=args.batch_size, shuffle=True, num_workers=0)
-    test_loader = DataLoader(test_data, batch_size=args.batch_size, shuffle=True, num_workers=0)
+    train_loader = DataLoader(train_data, batch_size=config["batch_size"], shuffle=True, num_workers=config["num_worker"])
+    test_loader = DataLoader(test_data, batch_size=config["batch_size"], shuffle=True, num_workers=0)
 
     # run training
-    for epoch in tqdm(range(args.num_epoch), leave=False):
+    for epoch in tqdm(range(config["num_epoch"]), leave=False):
         avg_loss = train_one_epoch(network, optimizer, scheduler, device, train_loader, epoch)
 
         print("------------------------------")
@@ -252,6 +254,6 @@ def plot_pc_labels(pc, labels):
 
 if __name__ == "__main__":
 
-    wandb.init(project="torch-pointnet")
+    wandb.init(project="torch-pointnet", config=args)
 
     main()

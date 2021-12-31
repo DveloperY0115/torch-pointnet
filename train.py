@@ -9,6 +9,7 @@ import argparse
 from tqdm import tqdm
 import numpy as np
 import matplotlib.pylab as plt
+from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 
 import wandb
 
@@ -32,7 +33,10 @@ parser.add_argument("--batch_size", type=int, default=64, help="Size of a batch"
 parser.add_argument("--num_worker", type=int, default=8, help="Number of workers for data loader")
 parser.add_argument("--out_dir", type=str, default="out", help="Name of the output directory")
 parser.add_argument(
-    "--save_period", type=int, default=100, help="Number of epochs between checkpoints"
+    "--save_period", type=int, default=50, help="Number of epochs between checkpoints"
+)
+parser.add_argument(
+    "--vis_period", type=int, default=1, help="Number of epochs between each visualization"
 )
 args = parser.parse_args()
 
@@ -66,12 +70,24 @@ def main():
     for epoch in tqdm(range(config["num_epoch"]), leave=False):
         avg_loss = train_one_epoch(network, optimizer, scheduler, device, train_loader, epoch)
 
+        # log data
+        wandb.log({"Train/Loss": avg_loss}, step=epoch)
+
         print("------------------------------")
         print("Epoch {} training avg_loss: {}".format(epoch, avg_loss))
         print("------------------------------")
 
         with torch.no_grad():
-            test_loss, test_accuracy = run_test(network, device, test_loader, epoch)
+            test_loss, test_accuracy, fig = run_test(network, device, test_loader, epoch)
+
+            logged_data = {"Test/Loss": test_loss, "Test/Accuracy": test_accuracy}
+
+            if epoch != 0 and ((epoch + 1) % args.vis_period == 0):
+                logged_data["Test/Visualization"] = wandb.Image(fig)
+
+            wandb.log(
+                logged_data, step=epoch
+            )
 
             print("------------------------------")
             print("Epoch {} test loss: {}".format(epoch, test_loss))
@@ -158,9 +174,6 @@ def train_one_epoch(network, optimizer, scheduler, device, train_loader, epoch):
 
     avg_loss = total_loss / args.num_iter
 
-    # log data
-    wandb.log({"Train/Loss": avg_loss}, step=epoch)
-
     return avg_loss
 
 
@@ -202,14 +215,10 @@ def run_test(network, device, test_loader, epoch):
     data = data.cpu()
     pred = pred.cpu()
     label = label.cpu()
+
     fig = plot_pc_labels(data, (pred, label))
 
-    # log data
-    wandb.log(
-        {"Test/Loss": loss, "Test/Accuracy": accuracy, "Test/Result": wandb.Image(fig)}, step=epoch
-    )
-
-    return loss, accuracy
+    return loss, accuracy, fig
 
 
 def plot_pc_labels(pc, labels):
@@ -221,7 +230,7 @@ def plot_pc_labels(pc, labels):
     - labels (Tuple): Tuple containing tensors representing labels of point clouds, such as predicted / GT class names.
 
     Returns:
-    - fig (matplotlib.pyplot.figure): Figure to be drawn.
+    - image (np.array): A Numpy array representing the image of rendered figure
     """
     # get class ID
     pred_id = labels[0]
@@ -241,6 +250,10 @@ def plot_pc_labels(pc, labels):
         constrained_layout=True
         )
 
+    # get the canvas corresponding to the figure being drawn
+    canvas = FigureCanvas(fig)
+    width, height = fig.get_size_inches() * fig.get_dpi()
+
     for idx, axi in enumerate(ax.flat):
         if idx < len(pc):
             axi.scatter(pc[idx, :, 0], pc[idx, :, 1], pc[idx, :, 2])
@@ -250,13 +263,14 @@ def plot_pc_labels(pc, labels):
                 )
             )
 
-    # fig = plt.figure()
+    # draw the canvas
+    canvas.draw()
 
-    return fig
+    image = np.frombuffer(canvas.tostring_rgb(), dtype="uint8")
+    image = np.reshape(image, (int(height), int(width), 3))
+    return image
 
 
 if __name__ == "__main__":
-
     wandb.init(project="torch-pointnet", config=args)
-
     main()

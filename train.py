@@ -236,7 +236,10 @@ def plot_pc_labels(pc, labels):
             cls_names[idx] = line.strip()
 
     # plot point clouds and labels
-    fig, ax = plt.subplots(nrows=4, ncols=4, figsize=(20, 20), constrained_layout=True)
+    fig, ax = plt.subplots(nrows=4, ncols=4, 
+        figsize=(20, 20), subplot_kw=dict(projection="3d"),
+        constrained_layout=True
+        )
 
     for idx, axi in enumerate(ax.flat):
         if idx < len(pc):

@@ -22,6 +22,7 @@ from models.pointnet_cls import PointNetCls
 from utils.dataset import PointNetDataset
 
 parser = argparse.ArgumentParser(description="Parsing argument")
+parser.add_argument("--device_id", type=int, default=0, help="ID of GPU to be used")
 parser.add_argument("--beta1", type=float, default=0.9, help="Beta 1 of Adam optimizer")
 parser.add_argument("--beta2", type=float, default=0.999, help="Beta 2 of Adam optimizer")
 parser.add_argument("--lr", type=float, default=1e-3, help="Learning rate for optimizer")
@@ -36,7 +37,7 @@ parser.add_argument(
     "--save_period", type=int, default=50, help="Number of epochs between checkpoints"
 )
 parser.add_argument(
-    "--vis_period", type=int, default=1, help="Number of epochs between each visualization"
+    "--vis_period", type=int, default=10, help="Number of epochs between each visualization"
 )
 args = parser.parse_args()
 
@@ -46,7 +47,7 @@ def main():
     config = wandb.config
 
     # check GPU
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = torch.device(config["device_id"] if torch.cuda.is_available() else "cpu")
 
     # model & optimizer, schedulers
     network = PointNetCls().to(device)
@@ -71,7 +72,7 @@ def main():
         avg_loss = train_one_epoch(network, optimizer, scheduler, device, train_loader, epoch)
 
         # log data
-        wandb.log({"Train/Loss": avg_loss}, step=epoch)
+        wandb.log({"Train/Loss": avg_loss}, step=epoch+1)
 
         print("------------------------------")
         print("Epoch {} training avg_loss: {}".format(epoch, avg_loss))
@@ -86,7 +87,7 @@ def main():
                 logged_data["Test/Visualization"] = wandb.Image(fig)
 
             wandb.log(
-                logged_data, step=epoch
+                logged_data, step=epoch+1
             )
 
             print("------------------------------")

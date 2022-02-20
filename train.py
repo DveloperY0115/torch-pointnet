@@ -179,26 +179,40 @@ def main():
 
         if epoch != 0 and ((epoch + 1) % args.save_period == 0):
             # TODO: Synchronization across devices after saving & loading
-            # save model
             save_dir = args.out_dir
+            
+            if get_rank() == 0:
+                # save model on only one process
+                if not os.path.exists(save_dir):
+                    os.mkdir(save_dir)
 
-            if not os.path.exists(save_dir):
-                os.mkdir(save_dir)
+                torch.save(
+                    {
+                        "epoch": epoch,
+                        "model_state_dict": network.state_dict(),
+                        "optimizer_state_dict": optimizer.state_dict(),
+                        "scheduler_state_dict": scheduler.state_dict(),
+                        "loss": avg_loss,
+                    },
+                    os.path.join(save_dir, "{}.pt".format(str(epoch))),
+                )
+                print(
+                    "[!] Saved model at: {}".format(os.path.join(save_dir, "{}.pt".format(str(epoch))))
+                )
 
-            torch.save(
-                {
-                    "epoch": epoch,
-                    "model_state_dict": network.state_dict(),
-                    "optimizer_state_dict": optimizer.state_dict(),
-                    "scheduler_state_dict": scheduler.state_dict(),
-                    "loss": avg_loss,
-                },
-                os.path.join(save_dir, "{}.pt".format(str(epoch + 1))),
+            # wait until the checkpoint is saved to disk
+            synchronize()
+            map_location = {"cuda:%d" % 0: "cuda:%d" % args.local_rank}
+            
+            # load the same parameters on all processes
+            ckpt_dict = torch.load(
+                os.path.join(save_dir, "{}.pt".format(str(epoch))),
+                map_location=map_location,
             )
-
-            print(
-                "[!] Saved model at: {}".format(os.path.join(save_dir, "{}.pt".format(str(epoch))))
-            )
+            epoch = ckpt_dict["epoch"]
+            network.load_state_dict(ckpt_dict["model_state_dict"])
+            optimizer.load_state_dict(ckpt_dict["optimizer_state_dict"])
+            scheduler.load_state_dict(ckpt_dict["scheduler_state_dict"])
 
     # clean up
     save_dir = args.out_dir
@@ -252,7 +266,7 @@ def train_one_epoch(network, optimizer, scheduler, device, train_loader, epoch):
     # collect loss all over the devices
     with torch.no_grad():
         total_loss_reduced = reduce_sum(total_loss)
-    
+
         avg_loss = total_loss_reduced.mean().item() / len(train_loader)
 
     return avg_loss

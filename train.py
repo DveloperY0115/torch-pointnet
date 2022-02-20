@@ -43,7 +43,7 @@ parser.add_argument("--step_size", type=int, default=100, help="Step size of Ste
 parser.add_argument("--gamma", type=float, default=0.99, help="Gamma of StepLR")
 parser.add_argument("--num_epoch", type=int, default=100, help="Number of epochs")
 parser.add_argument("--num_iter", type=int, default=100, help="Number of iteration in one epoch")
-parser.add_argument("--batch_size", type=int, default=256, help="Size of a batch per device")
+parser.add_argument("--batch_size", type=int, default=450, help="Size of a batch per device")
 parser.add_argument("--num_worker", type=int, default=2, help="Number of workers for data loader per device")
 parser.add_argument("--local_rank", type=int, default=0, help="Local rank for distributed training")
 parser.add_argument("--out_dir", type=str, default="out", help="Name of the output directory")
@@ -55,26 +55,7 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
-"""
-def train(
-    config,
-    loader,
-    network,
-    optimizer,
-    scheduler,
-    device,
-):
-    pbar = range(config["num_epoch"])
 
-    if get_rank() == 0:
-        pbar = tqdm(pbar, initial=0, dynamic_ncols=True, smoothing=0.01)
-    
-    if config["distributed"]:
-        # network is wrapped around by DDP.
-        network = network.module
-    else:
-        network = network
-"""
 
 def main():
     device = "cuda"
@@ -125,24 +106,24 @@ def main():
         train_dataset,
         num_replicas=n_gpu,
         rank=args.local_rank,
-    )
+    ) if args.distributed else None
     test_sampler = DistributedSampler(
         test_dataset,
         num_replicas=n_gpu,
         rank=args.local_rank,
-    )
+    ) if args.distributed else None
 
     train_loader = DataLoader(
         dataset=train_dataset, 
         batch_size=args.batch_size, 
-        shuffle=False, 
+        shuffle=(train_sampler is None), 
         num_workers=args.num_worker,
         sampler=train_sampler,
     )
     test_loader = DataLoader(
         dataset=test_dataset, 
         batch_size=args.batch_size,
-        shuffle=False, 
+        shuffle=(test_sampler is None), 
         num_workers=args.num_worker,
         sampler=test_sampler,
     )
@@ -158,6 +139,10 @@ def main():
         if epoch > args.num_epoch:
             print("[!] Training finished!")
             break
+
+        if args.distributed:
+            train_sampler.set_epoch(epoch)
+            test_sampler.set_epoch(epoch)
 
         avg_loss = train_one_epoch(
             network, 
@@ -265,9 +250,10 @@ def train_one_epoch(network, optimizer, scheduler, device, train_loader, epoch):
         total_loss += loss
 
     # collect loss all over the devices
-    total_loss_reduced = reduce_sum(total_loss)
-
-    avg_loss = total_loss_reduced.mean().item() / len(train_loader)
+    with torch.no_grad():
+        total_loss_reduced = reduce_sum(total_loss)
+    
+        avg_loss = total_loss_reduced.mean().item() / len(train_loader)
 
     return avg_loss
 
@@ -306,6 +292,7 @@ def run_test(network, device, test_loader, epoch):
     answer = (pred == label).type(torch.uint8)
     num_correct = torch.sum(answer)
     accuracy = (num_correct / args.batch_size) * 100
+    accuracy = reduce_sum(accuracy) / get_world_size()
 
     # plot point cloud and their predicted / GT labels
     data = data.cpu()

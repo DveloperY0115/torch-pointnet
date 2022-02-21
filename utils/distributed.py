@@ -40,11 +40,11 @@ def synchronize(group=None) -> None:
     (2) torch.distributed is initialized before invoking this function.
 
     Args:
-    - group (ProcessGroup, optional): The process group to work on. 
+    - group (ProcessGroup, optional): The process group to work on.
         If None, the default process group will be used.
 
     Returns:
-    - Async work handle, if async_op is set to True. 
+    - Async work handle, if async_op is set to True.
         None, if not async_op or if not part of the group
     """
     if not dist.is_available():
@@ -78,7 +78,7 @@ def get_world_size(group=None) -> int:
             the default process group will be used.
 
     Returns:
-    - The world size of the process group 
+    - The world size of the process group
         -1, if not part of the group
     """
     if not dist.is_available():
@@ -112,6 +112,7 @@ def reduce_sum(tensor: torch.Tensor) -> torch.Tensor:
     dist.all_reduce(tensor, op=dist.ReduceOp.SUM)
 
     return tensor
+
 
 # TODO: Investigate those functions!
 

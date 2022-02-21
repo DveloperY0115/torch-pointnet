@@ -4,12 +4,13 @@ tran.py
 Training routine for PointNet.
 """
 
-import os
 import argparse
-from tqdm import tqdm
-import numpy as np
+import os
+
 import matplotlib.pylab as plt
+import numpy as np
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+from tqdm import tqdm
 
 try:
     import wandb
@@ -17,22 +18,17 @@ except:
     wandb = None
 
 import torch
+import torch.distributed as dist
 import torch.nn as nn
 import torch.optim as optim
-import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data import DataLoader
 from torch.utils.data.distributed import DistributedSampler
 
 from models.pointnet_cls import PointNetCls
 from utils.dataset import PointNetDataset
-from utils.distributed import (
-    get_rank,
-    synchronize,
-    reduce_loss_dict,
-    reduce_sum,
-    get_world_size,
-)
+from utils.distributed import (get_rank, get_world_size, reduce_loss_dict,
+                               reduce_sum, synchronize)
 
 parser = argparse.ArgumentParser(description="Parsing argument")
 parser.add_argument("--device_id", type=int, default=0, help="ID of GPU to be used")

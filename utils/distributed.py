@@ -1,9 +1,10 @@
-from typing import Iterable
 import pickle
+from typing import Iterable
 
 import torch
 import torch.nn as nn
 from torch import distributed as dist
+
 
 def get_rank(group=None) -> int:
     """
@@ -29,6 +30,7 @@ def get_rank(group=None) -> int:
 
     return dist.get_rank(group)
 
+
 def synchronize(group=None) -> None:
     """
     Synchronize processes in the given process group.
@@ -36,13 +38,13 @@ def synchronize(group=None) -> None:
     Checks whether
     (1) torch.distributed is available on the calling machine
     (2) torch.distributed is initialized before invoking this function.
-    
+
     Args:
-    - group (ProcessGroup, optional): The process group to work on. 
+    - group (ProcessGroup, optional): The process group to work on.
         If None, the default process group will be used.
 
     Returns:
-    - Async work handle, if async_op is set to True. 
+    - Async work handle, if async_op is set to True.
         None, if not async_op or if not part of the group
     """
     if not dist.is_available():
@@ -57,10 +59,11 @@ def synchronize(group=None) -> None:
         # single process is running in the group,
         # no need to synchronize
         return
-    
+
     # otherwise, block until other processes finish
     # their job and synchronize
     dist.barrier()
+
 
 def get_world_size(group=None) -> int:
     """
@@ -69,13 +72,13 @@ def get_world_size(group=None) -> int:
     Checks whether
     (1) torch.distributed is available on the calling machine
     (2) torch.distributed is initialized before invoking this function.
-    
+
     Args:
     - group (ProcessGroup, optional): The process group to work on. If None,
             the default process group will be used.
 
     Returns:
-    - The world size of the process group 
+    - The world size of the process group
         -1, if not part of the group
     """
     if not dist.is_available():
@@ -85,6 +88,7 @@ def get_world_size(group=None) -> int:
         return 1
 
     return dist.get_world_size(group)
+
 
 def reduce_sum(tensor: torch.Tensor) -> torch.Tensor:
     """
@@ -102,14 +106,17 @@ def reduce_sum(tensor: torch.Tensor) -> torch.Tensor:
 
     if not dist.is_initialized():
         return tensor
-    
+
     # reduce the tensor across all machines
     tensor = tensor.clone()
     dist.all_reduce(tensor, op=dist.ReduceOp.SUM)
 
     return tensor
 
+
 # TODO: Investigate those functions!
+
+
 def gather_grad(params: Iterable[nn.Parameter]) -> None:
     """
     Collect gradient across all machines and compute their average.
@@ -121,13 +128,14 @@ def gather_grad(params: Iterable[nn.Parameter]) -> None:
 
     if world_size == 1:
         return
-    
+
     for param in params:
         if param.grad is not None:
             # reduce gradients of parameters across machines
             # and eventually compute the average gradient
             dist.all_reduce(param.grad.data, op=dist.ReduceOp.SUM)
             param.grad.data.div_(world_size)  # in-place division
+
 
 def reduce_loss_dict(loss_dict):
     world_size = get_world_size()

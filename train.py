@@ -30,38 +30,60 @@ from utils.distributed import (get_rank, get_world_size, reduce_loss_dict,
                                reduce_sum, synchronize)
 
 parser = argparse.ArgumentParser(description="Parsing argument")
-parser.add_argument("--device_id", type=int, default=0, help="ID of GPU to be used")
-parser.add_argument("--beta1", type=float, default=0.9, help="Beta 1 of Adam optimizer")
-parser.add_argument(
-    "--beta2", type=float, default=0.999, help="Beta 2 of Adam optimizer"
-)
-parser.add_argument(
-    "--lr", type=float, default=1e-3, help="Learning rate for optimizer"
-)
-parser.add_argument("--step_size", type=int, default=100, help="Step size of StepLR")
-parser.add_argument("--gamma", type=float, default=0.99, help="Gamma of StepLR")
-parser.add_argument("--num_epoch", type=int, default=100, help="Number of epochs")
-parser.add_argument(
-    "--num_iter", type=int, default=100, help="Number of iteration in one epoch"
-)
-parser.add_argument(
-    "--batch_size", type=int, default=450, help="Size of a batch per device"
-)
+parser.add_argument("--device_id",
+                    type=int,
+                    default=0,
+                    help="ID of GPU to be used")
+parser.add_argument("--beta1",
+                    type=float,
+                    default=0.9,
+                    help="Beta 1 of Adam optimizer")
+parser.add_argument("--beta2",
+                    type=float,
+                    default=0.999,
+                    help="Beta 2 of Adam optimizer")
+parser.add_argument("--lr",
+                    type=float,
+                    default=1e-3,
+                    help="Learning rate for optimizer")
+parser.add_argument("--step_size",
+                    type=int,
+                    default=100,
+                    help="Step size of StepLR")
+parser.add_argument("--gamma",
+                    type=float,
+                    default=0.99,
+                    help="Gamma of StepLR")
+parser.add_argument("--num_epoch",
+                    type=int,
+                    default=100,
+                    help="Number of epochs")
+parser.add_argument("--num_iter",
+                    type=int,
+                    default=100,
+                    help="Number of iteration in one epoch")
+parser.add_argument("--batch_size",
+                    type=int,
+                    default=450,
+                    help="Size of a batch per device")
 parser.add_argument(
     "--num_worker",
     type=int,
     default=2,
     help="Number of workers for data loader per device",
 )
-parser.add_argument(
-    "--local_rank", type=int, default=0, help="Local rank for distributed training"
-)
-parser.add_argument(
-    "--out_dir", type=str, default="out", help="Name of the output directory"
-)
-parser.add_argument(
-    "--save_period", type=int, default=50, help="Number of epochs between checkpoints"
-)
+parser.add_argument("--local_rank",
+                    type=int,
+                    default=0,
+                    help="Local rank for distributed training")
+parser.add_argument("--out_dir",
+                    type=str,
+                    default="out",
+                    help="Name of the output directory")
+parser.add_argument("--save_period",
+                    type=int,
+                    default=50,
+                    help="Number of epochs between checkpoints")
 parser.add_argument(
     "--vis_period",
     type=int,
@@ -116,24 +138,16 @@ def main():
     train_dataset = PointNetDataset(mode="train")
     test_dataset = PointNetDataset(mode="test")
 
-    train_sampler = (
-        DistributedSampler(
-            train_dataset,
-            num_replicas=n_gpu,
-            rank=args.local_rank,
-        )
-        if args.distributed
-        else None
-    )
-    test_sampler = (
-        DistributedSampler(
-            test_dataset,
-            num_replicas=n_gpu,
-            rank=args.local_rank,
-        )
-        if args.distributed
-        else None
-    )
+    train_sampler = (DistributedSampler(
+        train_dataset,
+        num_replicas=n_gpu,
+        rank=args.local_rank,
+    ) if args.distributed else None)
+    test_sampler = (DistributedSampler(
+        test_dataset,
+        num_replicas=n_gpu,
+        rank=args.local_rank,
+    ) if args.distributed else None)
 
     train_loader = DataLoader(
         dataset=train_dataset,
@@ -166,14 +180,12 @@ def main():
             train_sampler.set_epoch(epoch)
             test_sampler.set_epoch(epoch)
 
-        avg_loss = train_one_epoch(
-            network, optimizer, scheduler, device, train_loader, epoch
-        )
+        avg_loss = train_one_epoch(network, optimizer, scheduler, device,
+                                   train_loader, epoch)
 
         with torch.no_grad():
-            test_loss, test_accuracy, fig = run_test(
-                network, device, test_loader, epoch
-            )
+            test_loss, test_accuracy, fig = run_test(network, device,
+                                                     test_loader, epoch)
 
         # log data
         if get_rank() == 0:
@@ -214,11 +226,8 @@ def main():
                     },
                     os.path.join(save_dir, "{}.pt".format(str(epoch))),
                 )
-                print(
-                    "[!] Saved model at: {}".format(
-                        os.path.join(save_dir, "{}.pt".format(str(epoch)))
-                    )
-                )
+                print("[!] Saved model at: {}".format(
+                    os.path.join(save_dir, "{}.pt".format(str(epoch)))))
 
             # wait until the checkpoint is saved to disk
             synchronize()
@@ -248,7 +257,8 @@ def main():
     print("[!] Saved model at: {}".format(os.path.join(save_dir, "final.pt")))
 
 
-def train_one_epoch(network, optimizer, scheduler, device, train_loader, epoch):
+def train_one_epoch(network, optimizer, scheduler, device, train_loader,
+                    epoch):
     """
     Training loop for an epoch.
 
@@ -382,11 +392,8 @@ def plot_pc_labels(pc, labels):
     for idx, axi in enumerate(ax.flat):
         if idx < len(pc):
             axi.scatter(pc[idx, :, 0], pc[idx, :, 1], pc[idx, :, 2])
-            axi.set_title(
-                "Pred: {} | GT: {}".format(
-                    cls_names[pred_id[idx].item()], cls_names[gt_id[idx].item()]
-                )
-            )
+            axi.set_title("Pred: {} | GT: {}".format(
+                cls_names[pred_id[idx].item()], cls_names[gt_id[idx].item()]))
 
     # draw the canvas
     canvas.draw()

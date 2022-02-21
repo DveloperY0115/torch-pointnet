@@ -3,7 +3,6 @@ tran.py
 
 Training routine for PointNet.
 """
-
 import argparse
 import os
 

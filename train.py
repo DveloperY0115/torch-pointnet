@@ -35,18 +35,30 @@ from utils.distributed import (
 )
 
 parser = argparse.ArgumentParser(description="Parsing argument")
-parser.add_argument("--device_id", type=int, default=0, help="ID of GPU to be used")
-parser.add_argument("--beta1", type=float, default=0.9, help="Beta 1 of Adam optimizer")
-parser.add_argument("--beta2", type=float, default=0.999, help="Beta 2 of Adam optimizer")
-parser.add_argument("--lr", type=float, default=1e-3, help="Learning rate for optimizer")
-parser.add_argument("--step_size", type=int, default=100, help="Step size of StepLR")
-parser.add_argument("--gamma", type=float, default=0.99, help="Gamma of StepLR")
-parser.add_argument("--num_epoch", type=int, default=100, help="Number of epochs")
-parser.add_argument("--num_iter", type=int, default=100, help="Number of iteration in one epoch")
-parser.add_argument("--batch_size", type=int, default=450, help="Size of a batch per device")
-parser.add_argument("--num_worker", type=int, default=2, help="Number of workers for data loader per device")
-parser.add_argument("--local_rank", type=int, default=0, help="Local rank for distributed training")
-parser.add_argument("--out_dir", type=str, default="out", help="Name of the output directory")
+parser.add_argument("--device_id", type=int, default=0,
+                    help="ID of GPU to be used")
+parser.add_argument("--beta1", type=float, default=0.9,
+                    help="Beta 1 of Adam optimizer")
+parser.add_argument("--beta2", type=float, default=0.999,
+                    help="Beta 2 of Adam optimizer")
+parser.add_argument("--lr", type=float, default=1e-3,
+                    help="Learning rate for optimizer")
+parser.add_argument("--step_size", type=int, default=100,
+                    help="Step size of StepLR")
+parser.add_argument("--gamma", type=float, default=0.99,
+                    help="Gamma of StepLR")
+parser.add_argument("--num_epoch", type=int,
+                    default=100, help="Number of epochs")
+parser.add_argument("--num_iter", type=int, default=100,
+                    help="Number of iteration in one epoch")
+parser.add_argument("--batch_size", type=int, default=450,
+                    help="Size of a batch per device")
+parser.add_argument("--num_worker", type=int, default=2,
+                    help="Number of workers for data loader per device")
+parser.add_argument("--local_rank", type=int, default=0,
+                    help="Local rank for distributed training")
+parser.add_argument("--out_dir", type=str, default="out",
+                    help="Name of the output directory")
 parser.add_argument(
     "--save_period", type=int, default=50, help="Number of epochs between checkpoints"
 )
@@ -54,7 +66,6 @@ parser.add_argument(
     "--vis_period", type=int, default=10, help="Number of epochs between each visualization"
 )
 args = parser.parse_args()
-
 
 
 def main():
@@ -66,7 +77,7 @@ def main():
     if args.distributed:
         torch.cuda.set_device(args.local_rank)
         torch.distributed.init_process_group(
-            backend="nccl", 
+            backend="nccl",
             world_size=n_gpu,
             init_method="env://",
         )
@@ -75,18 +86,18 @@ def main():
     # initialize W&B after initializing torch.distributed
     if get_rank() == 0 and wandb:
         wandb.init(project="torch-pointnet-distributed", config=args)
-    
+
     # model & optimizer, schedulers
     network = PointNetCls().to(device)
 
     optimizer = optim.Adam(
-        network.parameters(), 
-        betas=(args.beta1, args.beta2), 
+        network.parameters(),
+        betas=(args.beta1, args.beta2),
         lr=args.lr,
     )
     scheduler = optim.lr_scheduler.StepLR(
-        optimizer, 
-        step_size=args.step_size, 
+        optimizer,
+        step_size=args.step_size,
         gamma=args.gamma,
     )
 
@@ -101,7 +112,7 @@ def main():
     # prepare data loaders
     train_dataset = PointNetDataset(mode="train")
     test_dataset = PointNetDataset(mode="test")
-    
+
     train_sampler = DistributedSampler(
         train_dataset,
         num_replicas=n_gpu,
@@ -114,16 +125,16 @@ def main():
     ) if args.distributed else None
 
     train_loader = DataLoader(
-        dataset=train_dataset, 
-        batch_size=args.batch_size, 
-        shuffle=(train_sampler is None), 
+        dataset=train_dataset,
+        batch_size=args.batch_size,
+        shuffle=(train_sampler is None),
         num_workers=args.num_worker,
         sampler=train_sampler,
     )
     test_loader = DataLoader(
-        dataset=test_dataset, 
+        dataset=test_dataset,
         batch_size=args.batch_size,
-        shuffle=(test_sampler is None), 
+        shuffle=(test_sampler is None),
         num_workers=args.num_worker,
         sampler=test_sampler,
     )
@@ -145,15 +156,16 @@ def main():
             test_sampler.set_epoch(epoch)
 
         avg_loss = train_one_epoch(
-            network, 
-            optimizer, scheduler, 
-            device, 
-            train_loader, 
+            network,
+            optimizer, scheduler,
+            device,
+            train_loader,
             epoch
         )
 
         with torch.no_grad():
-            test_loss, test_accuracy, fig = run_test(network, device, test_loader, epoch)
+            test_loss, test_accuracy, fig = run_test(
+                network, device, test_loader, epoch)
 
         # log data
         if get_rank() == 0:
@@ -180,7 +192,7 @@ def main():
         if epoch != 0 and ((epoch + 1) % args.save_period == 0):
             # TODO: Synchronization across devices after saving & loading
             save_dir = args.out_dir
-            
+
             if get_rank() == 0:
                 # save model on only one process
                 if not os.path.exists(save_dir):
@@ -197,13 +209,14 @@ def main():
                     os.path.join(save_dir, "{}.pt".format(str(epoch))),
                 )
                 print(
-                    "[!] Saved model at: {}".format(os.path.join(save_dir, "{}.pt".format(str(epoch))))
+                    "[!] Saved model at: {}".format(
+                        os.path.join(save_dir, "{}.pt".format(str(epoch))))
                 )
 
             # wait until the checkpoint is saved to disk
             synchronize()
             map_location = {"cuda:%d" % 0: "cuda:%d" % args.local_rank}
-            
+
             # load the same parameters on all processes
             ckpt_dict = torch.load(
                 os.path.join(save_dir, "{}.pt".format(str(epoch))),
@@ -218,7 +231,8 @@ def main():
     save_dir = args.out_dir
     if not os.path.exists(save_dir):
         os.mkdir(save_dir)
-    torch.save({"model_state_dict": network.state_dict(),}, os.path.join(save_dir, "final.pt"))
+    torch.save({"model_state_dict": network.state_dict(), },
+               os.path.join(save_dir, "final.pt"))
 
     print("[!] Saved model at: {}".format(os.path.join(save_dir, "final.pt")))
 
@@ -342,10 +356,10 @@ def plot_pc_labels(pc, labels):
             cls_names[idx] = line.strip()
 
     # plot point clouds and labels
-    fig, ax = plt.subplots(nrows=4, ncols=4, 
-        figsize=(20, 20), subplot_kw=dict(projection="3d"),
-        constrained_layout=True
-        )
+    fig, ax = plt.subplots(nrows=4, ncols=4,
+                           figsize=(20, 20), subplot_kw=dict(projection="3d"),
+                           constrained_layout=True
+                           )
 
     # get the canvas corresponding to the figure being drawn
     canvas = FigureCanvas(fig)

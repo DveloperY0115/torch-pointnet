@@ -365,6 +365,10 @@ def plot_pc_labels(pc, labels):
 
     image = np.frombuffer(canvas.tostring_rgb(), dtype="uint8")
     image = np.reshape(image, (int(height), int(width), 3))
+
+    # close figure before return
+    plt.close(fig)
+
     return image
 
 
